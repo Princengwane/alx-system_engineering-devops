@@ -19,5 +19,5 @@ frontend th3gr00t-tech-frontend
 
 backend th3gr00t-tech-backend
        balance roundrobin
-       server 831-web-01 35.174.205.38:80 check
-       server 831-web-02 34.229.137.148:80 check
+       server 117831-web-01 35.174.205.38:80 check
+       server 117831-web-02 34.229.137.148:80 check
