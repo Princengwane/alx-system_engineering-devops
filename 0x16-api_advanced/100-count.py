@@ -1,52 +1,63 @@
 #!/usr/bin/python3
-"""
-Function that queries the Reddit API and prints
-the top ten hot posts of a subreddit
-"""
+""" Module for storing the count_words function. """
+from requests import get
 
 
-import requests
+def count_words(subreddit, word_list, word_count=[], page_after=None):
+    """
+    Prints the count of the given words present in the title of the
+    subreddit's hottest articles.
+    """
+    headers = {'User-Agent': 'HolbertonSchool'}
 
-def count_words(subreddit, word_list, after=None, count_dict=None):
-    if count_dict is None:
-        count_dict = {}
+    word_list = [word.lower() for word in word_list]
 
-    base_url = f"https://www.reddit.com/r/{subreddit}/hot.json"
-    params = {"limit": 100, "after": after}
-    headers = {"User-Agent": "Reddit API Scraper"}
-
-    response = requests.get(base_url, params=params, headers=headers)
-
-    if response.status_code != 200:
-        print("An error occurred while fetching data from Reddit.")
-        return
-
-    data = response.json()
-    posts = data["data"]["children"]
-
-    for post in posts:
-        title = post["data"]["title"].lower()
+    if bool(word_count) is False:
         for word in word_list:
-            word = word.lower()
-            if word in title:
-                count_dict[word] = count_dict.get(word, 0) + title.count(word)
+            word_count.append(0)
 
-    after = data["data"]["after"]
-    
-    if after is not None:
-        count_words(subreddit, word_list, after, count_dict)
-    else:
-        sorted_counts = sorted(count_dict.items(), key=lambda x: (-x[1], x[0]))
-        for keyword, count in sorted_counts:
-            print(f"{keyword}: {count}")
+    if page_after is None:
+        url = 'https://www.reddit.com/r/{}/hot.json'.format(subreddit)
+        r = get(url, headers=headers, allow_redirects=False)
+        if r.status_code == 200:
+            for child in r.json()['data']['children']:
+                i = 0
+                for i in range(len(word_list)):
+                    for word in [w for w in child['data']['title'].split()]:
+                        word = word.lower()
+                        if word_list[i] == word:
+                            word_count[i] += 1
+                    i += 1
 
-if __name__ == "__main__":
-    import sys
-    
-    if len(sys.argv) < 3:
-        print("Usage: {} <subreddit> <list of keywords>".format(sys.argv[0]))
-        print("Ex: {} programming 'python java javascript'".format(sys.argv[0]))
+            if r.json()['data']['after'] is not None:
+                count_words(subreddit, word_list,
+                            word_count, r.json()['data']['after'])
     else:
-        subreddit = sys.argv[1]
-        keywords = sys.argv[2:]
-        count_words(subreddit, keywords)
+        url = ('https://www.reddit.com/r/{}/hot.json?after={}'
+               .format(subreddit,
+                       page_after))
+        r = get(url, headers=headers, allow_redirects=False)
+
+        if r.status_code == 200:
+            for child in r.json()['data']['children']:
+                i = 0
+                for i in range(len(word_list)):
+                    for word in [w for w in child['data']['title'].split()]:
+                        word = word.lower()
+                        if word_list[i] == word:
+                            word_count[i] += 1
+                    i += 1
+            if r.json()['data']['after'] is not None:
+                count_words(subreddit, word_list,
+                            word_count, r.json()['data']['after'])
+            else:
+                dicto = {}
+                for key_word in list(set(word_list)):
+                    i = word_list.index(key_word)
+                    if word_count[i] != 0:
+                        dicto[word_list[i]] = (word_count[i] *
+                                               word_list.count(word_list[i]))
+
+                for key, value in sorted(dicto.items(),
+                                         key=lambda x: (-x[1], x[0])):
+                    print('{}: {}'.format(key, value))
